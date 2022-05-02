@@ -1,6 +1,6 @@
 {
   "name": "com.polynatic.zenject-signal-helpers",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "displayName": "Zenject(Extenject) Signal Helpers",
   "description": "Helpers for working with Zenject Signals.",
   "unity": "2019.3",
@@ -11,7 +11,7 @@
     "signals"
   ],
   "author": {
-    "name": "Thomas Loreit",
+    "name": "polynatic",
     "url": "https://www.github.com/polynatic"
   }
 }

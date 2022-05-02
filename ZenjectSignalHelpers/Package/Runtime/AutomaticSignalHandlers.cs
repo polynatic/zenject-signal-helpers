@@ -128,7 +128,6 @@ namespace ZenjectSignalHelpers
         /// </summary>
         private static bool IsSignalHandlerWithWarning<TSubscriber>(MethodInfo method)
         {
-            Debug.LogError($"Checking {typeof(TSubscriber)}.{method.Name}");
             if (method.GetCustomAttribute<SignalHandlerAttribute>() == null) return false;
 
             if (method.ReturnType != typeof(void))

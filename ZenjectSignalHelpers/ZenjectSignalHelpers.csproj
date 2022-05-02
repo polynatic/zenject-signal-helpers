@@ -47,6 +47,9 @@
         <Compile Include="Package\Editor\EditorSignalValidation.cs" />
         <Compile Include="Package\Runtime\AutomaticSignalHandlers.cs" />
         <Compile Include="Package\Runtime\AutomaticSignalInstaller.cs" />
+        <Compile Include="Package\Runtime\Experimental\ExampleSignals.cs" />
+        <Compile Include="Package\Runtime\Experimental\ExampleUsage.cs" />
+        <Compile Include="Package\Runtime\Experimental\ExperimentalAsyncApi.cs" />
         <Compile Include="Package\Runtime\Interfaces.cs" />
         <Compile Include="Package\Runtime\ZenjectSignalHelpers.cs" />
         <Compile Include="Package\Utils\IEnumerable+ForEach.cs" />
