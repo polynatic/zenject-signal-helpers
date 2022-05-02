@@ -3,13 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using UnityEngine;
 using Zenject;
 using ZenjectSignalHelpers.Utils;
 
 namespace ZenjectSignalHelpers
 {
+    /// <summary>
+    /// Attribute marks a function as signal handler to be subscribed by AutomaticSignalHandlers.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class SignalHandlerAttribute : Attribute { }
+
 
     /// <summary>
     /// Automatically subscribes all methods of a class marked with [SignalHandler] to a SignalBus and unsubscribes them
@@ -114,11 +119,38 @@ namespace ZenjectSignalHelpers
         /// </summary>
         private static IEnumerable<MethodInfo> AllSignalHandlersOf<TSubscriber>() =>
             from method in typeof(TSubscriber).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            where method.GetCustomAttribute<SignalHandlerAttribute>() != null
-                  && method.ReturnType == typeof(void) // is an action?
-                  && method.GetParameters().Length == 1
-                  && typeof(ISignal).IsAssignableFrom(method.GetParameters()[0].ParameterType) // is parameter signal?
+            where IsSignalHandlerWithWarning<TSubscriber>(method)
             select method;
+
+
+        /// <summary>
+        /// Checks if the given method can be used as a signal handler and logs some warnings.
+        /// </summary>
+        private static bool IsSignalHandlerWithWarning<TSubscriber>(MethodInfo method)
+        {
+            Debug.LogError($"Checking {typeof(TSubscriber)}.{method.Name}");
+            if (method.GetCustomAttribute<SignalHandlerAttribute>() == null) return false;
+
+            if (method.ReturnType != typeof(void))
+            {
+                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} return type must be void");
+                return false;
+            }
+
+            if (method.GetParameters().Length != 1)
+            {
+                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} must only have one parameter: the signal type");
+                return false;
+            }
+
+            if (!typeof(ISignal).IsAssignableFrom(method.GetParameters()[0].ParameterType))
+            {
+                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} parameter is not an ISignal");
+                return false;
+            }
+
+            return true;
+        }
 
         private static MethodInfo CallMethodInfo { get; } = typeof(AutomaticSignalHandlers)
             .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
@@ -126,20 +158,18 @@ namespace ZenjectSignalHelpers
 
         private static MethodInfo SignalBusSubscribeMethod { get; } = typeof(SignalBus)
             .GetMethods()
-            .Single(
-                method => method.Name == nameof(SignalBus.Subscribe)
-                          && method.IsGenericMethod
-                          && method.GetParameters().Length == 1
-                          && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
+            .Single(method => method.Name == nameof(SignalBus.Subscribe)
+                              && method.IsGenericMethod
+                              && method.GetParameters().Length == 1
+                              && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
             );
 
         private static MethodInfo SignalBusUnsubscribeMethod { get; } = typeof(SignalBus)
             .GetMethods()
-            .Single(
-                method => method.Name == nameof(SignalBus.Unsubscribe)
-                          && method.IsGenericMethod
-                          && method.GetParameters().Length == 1
-                          && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
+            .Single(method => method.Name == nameof(SignalBus.Unsubscribe)
+                              && method.IsGenericMethod
+                              && method.GetParameters().Length == 1
+                              && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
             );
     }
 }

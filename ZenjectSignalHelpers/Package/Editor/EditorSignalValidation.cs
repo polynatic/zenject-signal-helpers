@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
-using UnityEngine;
 using ZenjectSignalHelpers.Utils;
+using Debug = UnityEngine.Debug;
 
 // ReSharper disable HeapView.DelegateAllocation
 
