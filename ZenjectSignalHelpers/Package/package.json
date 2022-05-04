@@ -1,13 +1,14 @@
 {
   "name": "com.polynatic.zenject-signal-helpers",
   "version": "0.0.1",
-  "displayName": "Zenject(Extenject) Signal Helpers",
+  "displayName": "Zenject Signal Helpers",
   "description": "Helpers for working with Zenject Signals.",
   "unity": "2019.3",
   "licensesUrl": "https://github.com/polynatic/zenject-signal-helpers/blob/main/LICENSE",
   "dependencies": {},
   "keywords": [
     "zenject",
+    "extenject",
     "signals"
   ],
   "author": {
