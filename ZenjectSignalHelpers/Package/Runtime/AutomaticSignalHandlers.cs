@@ -15,13 +15,22 @@ namespace ZenjectSignalHelpers
     [AttributeUsage(AttributeTargets.Method)]
     public class SignalHandlerAttribute : Attribute { }
 
+    /// <summary>
+    /// An attribute that can be placed on AutomaticSignalHandlers fields. It prevents automatic handler subscription
+    /// at initialization time. Call SubscribeAll() on the AutomaticSignalHandlers field to manually subscribe later.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field)]
+    public class ManualSubscribeAttribute : Attribute { }
 
     /// <summary>
     /// Automatically subscribes all methods of a class marked with [SignalHandler] to a SignalBus and unsubscribes them
     /// on destruction.
     ///
-    /// Usage: Create a readonly field on a class and in the constructor do
-    ///   Signals = new AutomaticSignalHandlers(SignalBus).SubscribeToAllOf(this);
+    /// Usage: Create AutomaticSignalHandlers field on any object in the Zenject context and use the [Inject] attribute to
+    /// initialize it.
+    ///   [Inject] private readonly AutomaticSignalHandlers Signals;
+    ///     or
+    ///   [Inject] [ManualSubscribe] private readonly AutomaticSignalHandlers Signals; // and call Signals.SubscribeAll() later
     /// </summary>
     public class AutomaticSignalHandlers
     {
@@ -29,28 +38,64 @@ namespace ZenjectSignalHelpers
         private List<Action> SubscribeActions;
         private List<Action> UnsubscribeActions;
 
-        public AutomaticSignalHandlers(SignalBus signalBus) => SignalBus = signalBus;
+        /// <summary>
+        /// Install AutomaticSignalHandlers in the given DiContainer, so [Inject] can be used on
+        /// AutomaticSignalHandlers fields. To be used within a Zenject dependency installer.
+        /// </summary>
+        public static void Install(DiContainer container) => container
+            .Bind<AutomaticSignalHandlers>()
+            .FromMethod(context =>
+            {
+                var hasManualAttribute = context.ObjectInstance
+                    .GetType()
+                    .GetField(context.MemberName, BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.GetCustomAttribute<ManualSubscribeAttribute>() != null;
+
+                return new AutomaticSignalHandlers(
+                    context.Container.Resolve<SignalBus>(),
+                    context.ObjectInstance,
+                    hasManualAttribute
+                );
+            })
+            .AsTransient();
+
+
+        /// <summary>
+        /// Subscribe all [SignalHandler]s on the signal bus.
+        /// </summary>
+        public void SubscribeAll() => SubscribeActions?.ForEach(subscribe => subscribe());
+
+        /// <summary>
+        /// Unsubscribe all [SignalHandler]s from the signal bus.
+        /// </summary>
+        public void UnsubscribeAll() => UnsubscribeActions?.ForEach(unsubscribe => unsubscribe());
+
+        /// <summary>
+        /// Fire a signal on the signal bus.
+        /// </summary>
+        public void Fire<TSignal>() where TSignal : ISignal => SignalBus.Fire<TSignal>();
+
+        /// <summary>
+        /// Fire a signal on the signal bus.
+        /// </summary>
+        public void Fire<TSignal>(TSignal signal) where TSignal : ISignal => SignalBus.Fire(signal);
+
+
+        private AutomaticSignalHandlers(
+            SignalBus signalBus,
+            object subscriber,
+            bool subscribeManually = false)
+        {
+            SignalBus = signalBus;
+
+            CreateActionsForAllHandlers(subscriber);
+
+            if (!subscribeManually)
+                SubscribeAll();
+        }
 
         ~AutomaticSignalHandlers() => UnsubscribeAll();
 
-        public AutomaticSignalHandlers SubscribeAllOf<TSubscriber>(TSubscriber subscriber)
-            where TSubscriber : class
-        {
-            SubscribeActions = new List<Action>();
-            UnsubscribeActions = new List<Action>();
-
-            AllSignalHandlersOf<TSubscriber>()
-                .ForEach(CreateActions(subscriber));
-
-            SubscribeAll();
-            return this;
-        }
-
-        public void SubscribeAll() => SubscribeActions?.ForEach(subscribe => subscribe());
-        public void UnsubscribeAll() => UnsubscribeActions?.ForEach(unsubscribe => unsubscribe());
-
-        public void Fire<TSignal>() where TSignal : ISignal => SignalBus.Fire<TSignal>();
-        public void Fire<TSignal>(TSignal signal) where TSignal : ISignal => SignalBus.Fire(signal);
 
         /// <summary>
         /// Creates Subscribe and Unsubscribe actions for the given signal handler.
@@ -66,6 +111,18 @@ namespace ZenjectSignalHelpers
             SubscribeActions.Add(callSubscribe);
             UnsubscribeActions.Add(callUnsubscribe);
         };
+
+        /// <summary>
+        /// Create actions for all handlers to call subscribe or unsubscribe on the signal bus.
+        /// </summary>
+        private void CreateActionsForAllHandlers(object subscriber)
+        {
+            SubscribeActions = new List<Action>();
+            UnsubscribeActions = new List<Action>();
+
+            AllSignalHandlersOf(subscriber.GetType())
+                .ForEach(CreateActions(subscriber));
+        }
 
         /// <summary>
         /// Creates an action that calls a given method on the SignalBus and passes a delegate parameter to it.
@@ -117,34 +174,34 @@ namespace ZenjectSignalHelpers
         /// <summary>
         /// Get all signal handlers of a subscriber.
         /// </summary>
-        private static IEnumerable<MethodInfo> AllSignalHandlersOf<TSubscriber>() =>
-            from method in typeof(TSubscriber).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            where IsSignalHandlerWithWarning<TSubscriber>(method)
-            select method;
+        private static IEnumerable<MethodInfo> AllSignalHandlersOf(Type subscriberType) =>
+            from potentialHandler in subscriberType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+            where IsSignalHandlerWithWarning(potentialHandler, subscriberType)
+            select potentialHandler;
 
 
         /// <summary>
         /// Checks if the given method can be used as a signal handler and logs some warnings.
         /// </summary>
-        private static bool IsSignalHandlerWithWarning<TSubscriber>(MethodInfo method)
+        private static bool IsSignalHandlerWithWarning(MethodInfo method, Type subscriberType)
         {
             if (method.GetCustomAttribute<SignalHandlerAttribute>() == null) return false;
 
             if (method.ReturnType != typeof(void))
             {
-                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} return type must be void");
+                Debug.LogError($"{subscriberType}.{method.Name} return type must be void");
                 return false;
             }
 
             if (method.GetParameters().Length != 1)
             {
-                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} must only have one parameter: the signal type");
+                Debug.LogError($"{subscriberType}.{method.Name} must only have one parameter: the signal type");
                 return false;
             }
 
             if (!typeof(ISignal).IsAssignableFrom(method.GetParameters()[0].ParameterType))
             {
-                Debug.LogError($"{typeof(TSubscriber)}.{method.Name} parameter is not an ISignal");
+                Debug.LogError($"{subscriberType}.{method.Name} parameter is not an ISignal");
                 return false;
             }
 
