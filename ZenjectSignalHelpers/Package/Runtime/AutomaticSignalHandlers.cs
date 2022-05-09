@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using JetBrains.Annotations;
 using UnityEngine;
 using Zenject;
 using ZenjectSignalHelpers.Utils;
@@ -13,6 +14,7 @@ namespace ZenjectSignalHelpers
     /// Attribute marks a function as signal handler to be subscribed by AutomaticSignalHandlers.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
+    [MeansImplicitUse(ImplicitUseKindFlags.Access)]
     public class SignalHandlerAttribute : Attribute { }
 
     /// <summary>
