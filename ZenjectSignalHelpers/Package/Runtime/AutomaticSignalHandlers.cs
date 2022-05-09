@@ -34,6 +34,7 @@ namespace ZenjectSignalHelpers
     ///     or
     ///   [Inject] [ManualSubscribe] private readonly AutomaticSignalHandlers Signals; // and call Signals.SubscribeAll() later
     /// </summary>
+    [MeansImplicitUse(ImplicitUseKindFlags.Access)]
     public class AutomaticSignalHandlers
     {
         private SignalBus SignalBus;
