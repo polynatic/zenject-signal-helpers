@@ -12,6 +12,10 @@ namespace ZenjectSignalHelpers
 {
     /// <summary>
     /// Attribute marks a function as signal handler to be subscribed by AutomaticSignalHandlers.
+    ///
+    /// Example:
+    ///   [SignalHandler]
+    ///   void OnSignal(DoSomething signal) { }
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     [MeansImplicitUse(ImplicitUseKindFlags.Access)]
@@ -76,12 +80,12 @@ namespace ZenjectSignalHelpers
         /// <summary>
         /// Fire a signal on the signal bus.
         /// </summary>
-        public void Fire<TSignal>() where TSignal : ISignal => SignalBus.Fire<TSignal>();
+        public void Fire<TSignal>() where TSignal : struct => SignalBus.AbstractFire<TSignal>();
 
         /// <summary>
         /// Fire a signal on the signal bus.
         /// </summary>
-        public void Fire<TSignal>(TSignal signal) where TSignal : ISignal => SignalBus.Fire(signal);
+        public void Fire<TSignal>(TSignal signal) where TSignal : struct => SignalBus.AbstractFire(signal);
 
 
         private AutomaticSignalHandlers(
@@ -190,11 +194,6 @@ namespace ZenjectSignalHelpers
         {
             if (method.GetCustomAttribute<SignalHandlerAttribute>() == null) return false;
 
-            if (method.ReturnType != typeof(void))
-            {
-                Debug.LogError($"{subscriberType}.{method.Name} return type must be void");
-                return false;
-            }
 
             if (method.GetParameters().Length != 1)
             {
@@ -202,9 +201,11 @@ namespace ZenjectSignalHelpers
                 return false;
             }
 
-            if (!typeof(ISignal).IsAssignableFrom(method.GetParameters()[0].ParameterType))
+            var parameterType = method.GetParameters()[0].ParameterType;
+
+            if (method.ReturnType != typeof(void))
             {
-                Debug.LogError($"{subscriberType}.{method.Name} parameter is not an ISignal");
+                Debug.LogError($"{subscriberType}.{method.Name}({parameterType.Name}) return type must be void");
                 return false;
             }
 

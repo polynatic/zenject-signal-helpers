@@ -53,6 +53,7 @@
         <Compile Include="Package\Runtime\Interfaces.cs" />
         <Compile Include="Package\Runtime\ZenjectSignalHelpers.cs" />
         <Compile Include="Package\Utils\IEnumerable+ForEach.cs" />
+        <Compile Include="Package\Utils\ZenjectSignalExtensions.cs" />
         <Compile Include="Package\Utils\ZenjectSignalHelpers.Utils.cs" />
         <Compile Include="Package\Utils\String+RichText.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

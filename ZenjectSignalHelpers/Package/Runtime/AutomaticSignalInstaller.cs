@@ -16,7 +16,7 @@ namespace ZenjectSignalHelpers
         /// </summary>
         public static void InstallAllSignals(DiContainer container)
         {
-            AllSignals().ForEach(signal => container.DeclareSignal(signal).OptionalSubscriber());
+            AllSignals().ForEach(signal => container.DeclareSignalWithInterfaces(signal).OptionalSubscriber());
         }
 
         /// <summary>
