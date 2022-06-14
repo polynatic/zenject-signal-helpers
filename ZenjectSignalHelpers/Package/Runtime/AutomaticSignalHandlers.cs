@@ -46,6 +46,10 @@ namespace ZenjectSignalHelpers
         private List<Action> UnsubscribeActions;
 
         /// <summary>
+        /// Are all [SignalHandlers] currently subscribed?
+        /// </summary>
+        public bool AreSubscribed { get; private set; }
+        /// <summary>
         /// Install AutomaticSignalHandlers in the given DiContainer, so [Inject] can be used on
         /// AutomaticSignalHandlers fields. To be used within a Zenject dependency installer.
         /// </summary>
@@ -70,12 +74,26 @@ namespace ZenjectSignalHelpers
         /// <summary>
         /// Subscribe all [SignalHandler]s on the signal bus.
         /// </summary>
-        public void SubscribeAll() => SubscribeActions?.ForEach(subscribe => subscribe());
+        public void SubscribeAll()
+        {
+            if (AreSubscribed)
+                return;
+
+            AreSubscribed = true;
+            SubscribeActions?.ForEach(subscribe => subscribe());
+        }
 
         /// <summary>
         /// Unsubscribe all [SignalHandler]s from the signal bus.
         /// </summary>
-        public void UnsubscribeAll() => UnsubscribeActions?.ForEach(unsubscribe => unsubscribe());
+        public void UnsubscribeAll()
+        {
+            if (!AreSubscribed)
+                return;
+
+            AreSubscribed = false;
+            UnsubscribeActions?.ForEach(unsubscribe => unsubscribe());
+        }
 
         /// <summary>
         /// Fire a signal on the signal bus.
