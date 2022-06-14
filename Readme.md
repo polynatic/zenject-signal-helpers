@@ -16,6 +16,8 @@ A small helper library to work with Zenject signals in Unity.
      
 You can install a different version by checking the Releases page on Github and using a different version at the end of the package URL.
 
+⚠️ For IL2CPP to work with struct signals, Unity version 2021LTS is minimum requirement.
+
 ## Usage
 
 tbd...
