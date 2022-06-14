@@ -26,7 +26,7 @@ namespace ZenjectSignalHelpers
     /// at initialization time. Call SubscribeAll() on the AutomaticSignalHandlers field to manually subscribe later.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field)]
-    public class ManualSubscribeAttribute : Attribute { }
+    public class SubscribeManuallyAttribute : Attribute { }
 
     /// <summary>
     /// Automatically subscribes all methods of a class marked with [SignalHandler] to a SignalBus and unsubscribes them
@@ -42,30 +42,40 @@ namespace ZenjectSignalHelpers
     public class AutomaticSignalHandlers
     {
         private SignalBus SignalBus;
+
+        /// <summary>
+        /// Actions to subscribe every [SignalHandler].
+        /// </summary>
         private List<Action> SubscribeActions;
+
+        /// <summary>
+        /// Actions to unsubscribe every [SignalHandler].
+        /// </summary>
         private List<Action> UnsubscribeActions;
 
         /// <summary>
         /// Are all [SignalHandlers] currently subscribed?
         /// </summary>
         public bool AreSubscribed { get; private set; }
+
         /// <summary>
         /// Install AutomaticSignalHandlers in the given DiContainer, so [Inject] can be used on
-        /// AutomaticSignalHandlers fields. To be used within a Zenject dependency installer.
+        /// AutomaticSignalHandlers fields. To be used within a Zenject dependency installer or
+        /// using the ZenjectSignalHelpersInstaller.
         /// </summary>
         public static void Install(DiContainer container) => container
             .Bind<AutomaticSignalHandlers>()
             .FromMethod(context =>
             {
-                var hasManualAttribute = context.ObjectInstance
+                var hasManualSubscriptionAttribute = context.ObjectInstance
                     .GetType()
                     .GetField(context.MemberName, BindingFlags.NonPublic | BindingFlags.Instance)
-                    ?.GetCustomAttribute<ManualSubscribeAttribute>() != null;
+                    ?.GetCustomAttribute<SubscribeManuallyAttribute>() != null;
 
                 return new AutomaticSignalHandlers(
                     context.Container.Resolve<SignalBus>(),
                     context.ObjectInstance,
-                    hasManualAttribute
+                    hasManualSubscriptionAttribute
                 );
             })
             .AsTransient();
