@@ -1,3 +1,4 @@
+using UnityEngine;
 using Zenject;
 
 namespace ZenjectSignalHelpers
@@ -14,11 +15,25 @@ namespace ZenjectSignalHelpers
     /// </summary>
     public class ZenjectSignalHelpersInstaller : MonoInstaller
     {
+        [Tooltip("Should a SignalBus be installed")] [SerializeField]
+        private bool InstallSignalBus = true;
+
+        [Tooltip("Should AutomaticSignalHandlers be installed")] [SerializeField]
+        private bool InstallAutomaticSignalHandlers = true;
+
+        [Tooltip("Should all signals (ISignal) be declared")] [SerializeField]
+        private bool DeclareAllSignals = true;
+
         public override void InstallBindings()
         {
-            SignalBusInstaller.Install(Container);
-            AutomaticSignalHandlers.Install(Container);
-            AutomaticSignalInstaller.InstallAllSignals(Container);
+            if (InstallSignalBus)
+                SignalBusInstaller.Install(Container);
+
+            if (InstallAutomaticSignalHandlers)
+                AutomaticSignalHandlers.Install(Container);
+
+            if (DeclareAllSignals)
+                AutomaticSignalInstaller.InstallAllSignals(Container);
         }
     }
 }
