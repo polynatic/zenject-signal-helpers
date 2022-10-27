@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
@@ -58,24 +58,25 @@ namespace ZenjectSignalHelpers
 
         private void Save()
         {
-            if (SaveTask.Status == UniTaskStatus.Pending)
+            if (SaveTask != null)
                 return;
 
             SaveTask = SaveDeferred();
         }
 
-        private async UniTask SaveDeferred()
+        private async Task SaveDeferred()
         {
-            await UniTask.Yield(); // wait until later
+            await Task.Yield(); // wait until later to only set dirty once if saving multiple times
 
             EditorUtility.SetDirty(Instance);
+            SaveTask = null;
         }
 #endif
 
 
         [NonSerialized] private HashSet<Type> SignalsExcludedFromLog = new HashSet<Type>();
 
-        [NonSerialized] private UniTask SaveTask;
+        [NonSerialized] private Task SaveTask;
 
         [SerializeField] private List<string> SerializedSignalsExcludedFromLog;
 
