@@ -96,7 +96,8 @@ namespace ZenjectSignalHelpers
             var openGroups = Groups?
                              .Where(group => group.FoldOut)
                              .Select(group => group.Name)
-                             .ToList();
+                             .ToList()
+                             ?? new List<string>();
 
             var openGroupsString = String.Join(", ", openGroups);
             EditorPrefs.SetString(GroupsPrefsKey, openGroupsString);
