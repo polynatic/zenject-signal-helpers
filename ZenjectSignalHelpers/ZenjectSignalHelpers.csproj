@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
     <PropertyGroup>
@@ -49,9 +49,6 @@
         <Compile Include="Package\Runtime\AutomaticSignalHandlers.cs" />
         <Compile Include="Package\Runtime\AutomaticSignalInstaller.cs" />
         <Compile Include="Package\Runtime\ZenjectSignalHelpersInstaller.cs" />
-        <Compile Include="Package\Runtime\Experimental\ExampleSignals.cs" />
-        <Compile Include="Package\Runtime\Experimental\ExampleUsage.cs" />
-        <Compile Include="Package\Runtime\Experimental\ExperimentalAsyncApi.cs" />
         <Compile Include="Package\Runtime\Interfaces.cs" />
         <Compile Include="Package\Runtime\ZenjectSignalHelpers.cs" />
         <Compile Include="Package\Utils\IEnumerable+ForEach.cs" />
