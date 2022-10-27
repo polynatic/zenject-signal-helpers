@@ -28,6 +28,14 @@ namespace ZenjectSignalHelpers
     [AttributeUsage(AttributeTargets.Field)]
     public class SubscribeManuallyAttribute : Attribute { }
 
+    public interface IAutomaticSignalHandler
+    {
+        internal void Construct(
+            SignalBus signalBus,
+            object subscriber,
+            bool subscribeManually = false);
+    }
+
     /// <summary>
     /// Automatically subscribes all methods of a class marked with [SignalHandler] to a SignalBus and unsubscribes them
     /// on destruction.
@@ -39,9 +47,9 @@ namespace ZenjectSignalHelpers
     ///   [Inject] [ManualSubscribe] private readonly AutomaticSignalHandlers Signals; // and call Signals.SubscribeAll() later
     /// </summary>
     [MeansImplicitUse(ImplicitUseKindFlags.Access)]
-    public class AutomaticSignalHandlers
+    public class AutomaticSignalHandlers : IAutomaticSignalHandler
     {
-        private SignalBus SignalBus;
+        public SignalBus SignalBus { get; private set; }
 
         /// <summary>
         /// Actions to subscribe every [SignalHandler].
@@ -63,22 +71,63 @@ namespace ZenjectSignalHelpers
         /// AutomaticSignalHandlers fields. To be used within a Zenject dependency installer or
         /// using the ZenjectSignalHelpersInstaller.
         /// </summary>
-        public static void Install(DiContainer container) => container
-            .Bind<AutomaticSignalHandlers>()
-            .FromMethod(context =>
+        public static void Install<T>(DiContainer container) where T : IAutomaticSignalHandler, new()
+        {
+            if (typeof(T) != typeof(AutomaticSignalHandlers))
             {
-                var hasManualSubscriptionAttribute = context.ObjectInstance
-                    .GetType()
-                    .GetField(context.MemberName, BindingFlags.NonPublic | BindingFlags.Instance)
-                    ?.GetCustomAttribute<SubscribeManuallyAttribute>() != null;
+                container
+                    .BindInterfacesAndSelfTo<T>()
+                    .FromMethod(
+                        context =>
+                        {
+                            var hasManualSubscriptionAttribute = context.ObjectInstance
+                                                                        .GetType()
+                                                                        .GetField(
+                                                                            context.MemberName,
+                                                                            BindingFlags.NonPublic
+                                                                            | BindingFlags.Instance
+                                                                        )
+                                                                        ?.GetCustomAttribute<SubscribeManuallyAttribute
+                                                                        >()
+                                                                 != null;
 
-                return new AutomaticSignalHandlers(
-                    context.Container.Resolve<SignalBus>(),
-                    context.ObjectInstance,
-                    hasManualSubscriptionAttribute
-                );
-            })
-            .AsTransient();
+                            var signals = new T();
+                            signals.Construct(
+                                context.Container.Resolve<SignalBus>(),
+                                context.ObjectInstance,
+                                hasManualSubscriptionAttribute
+                            );
+                            return signals;
+                        }
+                    )
+                    .AsTransient();
+            }
+
+            container
+                .BindInterfacesAndSelfTo<AutomaticSignalHandlers>()
+                .FromMethod(
+                    context =>
+                    {
+                        var hasManualSubscriptionAttribute = context.ObjectInstance
+                                                                    .GetType()
+                                                                    .GetField(
+                                                                        context.MemberName,
+                                                                        BindingFlags.NonPublic | BindingFlags.Instance
+                                                                    )
+                                                                    ?.GetCustomAttribute<SubscribeManuallyAttribute>()
+                                                             != null;
+
+                        var signals = new AutomaticSignalHandlers();
+                        signals.Construct(
+                            context.Container.Resolve<SignalBus>(),
+                            context.ObjectInstance,
+                            hasManualSubscriptionAttribute
+                        );
+                        return signals;
+                    }
+                )
+                .AsTransient();
+        }
 
 
         /// <summary>
@@ -116,10 +165,19 @@ namespace ZenjectSignalHelpers
         public void Fire<TSignal>(TSignal signal) where TSignal : struct => SignalBus.AbstractFire(signal);
 
 
-        private AutomaticSignalHandlers(
+        protected AutomaticSignalHandlers(
             SignalBus signalBus,
             object subscriber,
-            bool subscribeManually = false)
+            bool subscribeManually = false) =>
+            Construct(signalBus, subscriber, subscribeManually);
+
+        void IAutomaticSignalHandler.Construct(
+            SignalBus signalBus,
+            object subscriber,
+            bool subscribeManually) =>
+            Construct(signalBus, subscriber, subscribeManually);
+
+        private void Construct(SignalBus signalBus, object subscriber, bool subscribeManually)
         {
             SignalBus = signalBus;
 
@@ -129,6 +187,8 @@ namespace ZenjectSignalHelpers
                 SubscribeAll();
         }
 
+        public AutomaticSignalHandlers() { }
+
         ~AutomaticSignalHandlers() => UnsubscribeAll();
 
 
@@ -136,16 +196,17 @@ namespace ZenjectSignalHelpers
         /// Creates Subscribe and Unsubscribe actions for the given signal handler.
         /// </summary>
         /// <param name="target">Target instance on which the handler will be called.</param>
-        private Action<MethodInfo> CreateActions<TTarget>(TTarget target) where TTarget : class => handler =>
-        {
-            var signalType = handler.GetParameters()[0].ParameterType;
-            var handlerDelegate = BindDelegate(target, handler); // will be passed to subscribe/unsubscribe
-            var callSubscribe = CallForSignalBus(SignalBusSubscribeMethod, handlerDelegate, signalType);
-            var callUnsubscribe = CallForSignalBus(SignalBusUnsubscribeMethod, handlerDelegate, signalType);
+        private Action<MethodInfo> CreateActions<TTarget>(TTarget target) where TTarget : class =>
+            handler =>
+            {
+                var signalType = handler.GetParameters()[0].ParameterType;
+                var handlerDelegate = BindDelegate(target, handler); // will be passed to subscribe/unsubscribe
+                var callSubscribe = CallForSignalBus(SignalBusSubscribeMethod, handlerDelegate, signalType);
+                var callUnsubscribe = CallForSignalBus(SignalBusUnsubscribeMethod, handlerDelegate, signalType);
 
-            SubscribeActions.Add(callSubscribe);
-            UnsubscribeActions.Add(callUnsubscribe);
-        };
+                SubscribeActions.Add(callSubscribe);
+                UnsubscribeActions.Add(callUnsubscribe);
+            };
 
         /// <summary>
         /// Create actions for all handlers to call subscribe or unsubscribe on the signal bus.
@@ -220,7 +281,8 @@ namespace ZenjectSignalHelpers
         /// </summary>
         private static bool IsSignalHandlerWithWarning(MethodInfo method, Type subscriberType)
         {
-            if (method.GetCustomAttribute<SignalHandlerAttribute>() == null) return false;
+            if (method.GetCustomAttribute<SignalHandlerAttribute>() == null)
+                return false;
 
 
             if (method.GetParameters().Length != 1)
@@ -241,23 +303,30 @@ namespace ZenjectSignalHelpers
         }
 
         private static MethodInfo CallMethodInfo { get; } = typeof(AutomaticSignalHandlers)
-            .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
-            .Single(method => method.Name == nameof(DelegateCall));
+                                                            .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+                                                            .Single(method => method.Name == nameof(DelegateCall));
 
         private static MethodInfo SignalBusSubscribeMethod { get; } = typeof(SignalBus)
-            .GetMethods()
-            .Single(method => method.Name == nameof(SignalBus.Subscribe)
-                              && method.IsGenericMethod
-                              && method.GetParameters().Length == 1
-                              && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
-            );
+                                                                      .GetMethods()
+                                                                      .Single(
+                                                                          method => method.Name
+                                                                              == nameof(SignalBus.Subscribe)
+                                                                              && method.IsGenericMethod
+                                                                              && method.GetParameters().Length == 1
+                                                                              && method.GetParameters()[0].ParameterType
+                                                                              != typeof(Action) // not the non-generic
+                                                                      );
 
         private static MethodInfo SignalBusUnsubscribeMethod { get; } = typeof(SignalBus)
-            .GetMethods()
-            .Single(method => method.Name == nameof(SignalBus.Unsubscribe)
-                              && method.IsGenericMethod
-                              && method.GetParameters().Length == 1
-                              && method.GetParameters()[0].ParameterType != typeof(Action) // not the non-generic
-            );
+                                                                        .GetMethods()
+                                                                        .Single(
+                                                                            method => method.Name
+                                                                                == nameof(SignalBus.Unsubscribe)
+                                                                                && method.IsGenericMethod
+                                                                                && method.GetParameters().Length == 1
+                                                                                && method.GetParameters()[0]
+                                                                                    .ParameterType
+                                                                                != typeof(Action) // not the non-generic
+                                                                        );
     }
 }
