@@ -12,7 +12,7 @@ A small helper library to work with Zenject signals in Unity.
 * Select \[*Add package from git URL...*\]
 * Enter the following URL and press *Add*
 
-      https://github.com/polynatic/zenject-signal-helpers.git?path=/ZenjectSignalHelpers/Package#v0.0.7
+      https://github.com/polynatic/zenject-signal-helpers.git?path=/ZenjectSignalHelpers/Package#v0.0.8
      
 You can install a different version by checking the Releases page on Github and using a different version at the end of the package URL.
 

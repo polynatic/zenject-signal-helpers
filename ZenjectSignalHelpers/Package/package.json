@@ -1,6 +1,6 @@
 {
   "name": "com.polynatic.zenject-signal-helpers",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "displayName": "Zenject Signal Helpers",
   "description": "Helpers for working with Zenject Signals.",
   "unity": "2019.3",
