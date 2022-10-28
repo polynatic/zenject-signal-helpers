@@ -10,22 +10,24 @@ namespace ZenjectSignalHelpers
     public class ZenjectSignalLoggerSettings : ScriptableObject, ISerializationCallbackReceiver
     {
         [NonSerialized] private static ZenjectSignalLoggerSettings Instance;
-        private const string SettingsPath = "Assets/Resources/ZenjectSignalLoggerSettings.asset";
+        private const string SettingsPath = "ZenjectSignalLoggerSettings";
 
-        public static bool ShouldLogSignal(Type type) => !GetInstance().SignalsExcludedFromLog.Contains(type);
+        public static bool ShouldLogSignal(Type type) => !GetInstance()?.SignalsExcludedFromLog.Contains(type) ?? false;
 
         private static ZenjectSignalLoggerSettings GetInstance()
         {
             if (!Instance)
             {
-                Instance = AssetDatabase.LoadAssetAtPath<ZenjectSignalLoggerSettings>(SettingsPath);
+                Instance = Resources.Load<ZenjectSignalLoggerSettings>(SettingsPath);
 
+#if UNITY_EDITOR
                 if (!Instance)
                 {
                     Instance = CreateInstance<ZenjectSignalLoggerSettings>();
 
-                    AssetDatabase.CreateAsset(Instance, SettingsPath);
+                    AssetDatabase.CreateAsset(Instance, $"Assets/Resources/{SettingsPath}.asset");
                 }
+#endif
             }
 
             return Instance;
@@ -46,6 +48,10 @@ namespace ZenjectSignalHelpers
                 return;
 
             var instance = GetInstance();
+
+            if (!instance)
+                return;
+
             var excludedSignals = instance.SignalsExcludedFromLog;
 
             if (!shouldLog)
@@ -78,7 +84,7 @@ namespace ZenjectSignalHelpers
 
         [NonSerialized] private Task SaveTask;
 
-        [SerializeField] private List<string> SerializedSignalsExcludedFromLog;
+        [SerializeField, HideInInspector] private List<string> SerializedSignalsExcludedFromLog;
 
         public void OnBeforeSerialize() =>
             SerializedSignalsExcludedFromLog = SignalsExcludedFromLog?
