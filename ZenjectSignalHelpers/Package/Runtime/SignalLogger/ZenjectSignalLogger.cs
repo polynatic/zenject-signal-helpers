@@ -29,27 +29,18 @@ namespace ZenjectSignalHelpers
             var color = SignalTypeColor(signal);
             var fields = FormatFields(signal);
             var type = signal.GetType().Name;
+            var title = fields.Length == 1 ? $" <color=grey>{{<i>{fields[0].Replace(" =", ":")}</i>}}</color>" : "";
+            var joinedFields = $"{{ {String.Join(", ", fields)} }}";
 
-            Debug.Log($"<b><color={color}>{category}: </Color> {type}</b>\n{fields}\n");
+            Debug.Log($"<b><color={color}>{category}: </Color> {type}{title}</b>\n{joinedFields}\n");
         }
 
-        private string FormatFields(object obj)
-        {
-            var fields = obj
-                         .GetType()
-                         .GetFields()
-                         .Select(
-                             field =>
-                             {
-                                 var name = field.Name;
-                                 var value = field.GetValue(obj);
-                                 return $"{name} = {value}";
-                             }
-                         )
-                         .ToArray();
-
-            return $"{{ {String.Join(", ", fields)} }}";
-        }
+        private string[] FormatFields(object obj) =>
+            obj
+                .GetType()
+                .GetFields()
+                .Select(field => $"{field.Name} = {field.GetValue(obj)}")
+                .ToArray();
 
         private string SignalTypeCategory(object signal) =>
             signal switch
